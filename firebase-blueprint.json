@@ -1,0 +1,307 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin", "pengelola"] },
+        "createdAt": { "type": "number" },
+        "affiliateStatus": { "type": "string", "enum": ["none", "pending", "approved", "rejected"] },
+        "affiliateCode": { "type": "string" },
+        "affiliateBalance": { "type": "number" },
+        "affiliatePendingBalance": { "type": "number" },
+        "affiliateBankDetails": { "type": "object" }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Property category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "iconUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "slug", "isActive"]
+    },
+    "Promo": {
+      "title": "Promo",
+      "description": "Promotional offers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "code": { "type": "string" },
+        "discountAmount": { "type": "number" },
+        "discountType": { "type": "string", "enum": ["percentage", "flat"] },
+        "imageUrl": { "type": "string" },
+        "startDate": { "type": "number" },
+        "endDate": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "title", "description", "code", "discountAmount", "discountType", "startDate", "endDate", "isActive", "createdAt", "updatedAt"]
+    },
+    "Property": {
+      "title": "Property",
+      "description": "Accommodation unit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "dynamicPrices": { "type": "object" },
+        "images": { "type": "array" },
+        "amenities": { "type": "array" },
+        "maxGuests": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "units": { "type": "array" },
+        "bookedDates": { "type": "array" },
+        "ratingAverage": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "nearbyAttractions": { "type": "array" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "categoryId", "name", "description", "basePrice", "images", "amenities", "maxGuests", "isActive", "units", "bookedDates", "ratingAverage", "reviewCount", "createdAt", "updatedAt"]
+    },
+    "Attraction": {
+      "title": "Attraction",
+      "description": "Tourist destination or attraction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "location": { "type": "string" },
+        "images": { "type": "array" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "description", "location", "images", "isActive", "createdAt", "updatedAt"]
+    },
+    "AddOn": {
+      "title": "AddOn",
+      "description": "Additional services like BBQ, Jeep, etc.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string", "enum": ["BBQ", "Jeep", "Documentation", "Rental", "Other"] },
+        "images": { "type": "array" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "description", "price", "category", "isActive", "createdAt", "updatedAt"]
+    },
+    "TourPackage": {
+      "title": "TourPackage",
+      "description": "Bundled tour services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "includedServices": { "type": "array" },
+        "propertyIds": { "type": "array" },
+        "attractionIds": { "type": "array" },
+        "images": { "type": "array" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "description", "price", "includedServices", "isActive", "createdAt", "updatedAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Reservation record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "tourPackageId": { "type": "string" },
+        "addOnIds": { "type": "array" },
+        "userId": { "type": "string" },
+        "checkInDate": { "type": "string" },
+        "checkOutDate": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "PAID", "CANCELLED"] },
+        "paymentUrl": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "affiliateId": { "type": "string" },
+        "commissionAmount": { "type": "number" },
+        "commissionStatus": { "type": "string", "enum": ["pending", "ready", "paid", "cancelled"] }
+      },
+      "required": ["id", "propertyId", "userId", "checkInDate", "checkOutDate", "totalAmount", "status", "createdAt", "updatedAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "userId": { "type": "string" },
+        "grossAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "settlement", "expire", "cancel"] },
+        "snapToken": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "bookingId", "userId", "grossAmount", "status", "createdAt", "updatedAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "User review for a property",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "propertyId", "bookingId", "userId", "userName", "rating", "comment", "createdAt"]
+    },
+    "Blog": {
+      "title": "Blog",
+      "description": "Article or news post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "content": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "author": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "title", "slug", "content", "isActive", "createdAt", "updatedAt"]
+    },
+    "Jeep": {
+      "title": "Jeep",
+      "description": "Jeep rental unit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "engine": { "type": "string" },
+        "capacity": { "type": "number" },
+        "pricePerDay": { "type": "number" },
+        "images": { "type": "array" },
+        "rules": { "type": "array" },
+        "regulations": { "type": "array" },
+        "attractionIds": { "type": "array" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "description", "engine", "capacity", "pricePerDay", "images", "rules", "regulations", "isActive", "createdAt", "updatedAt"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "Represents an affiliate withdrawal request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "affiliateId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "bankDetails": {
+          "type": "object",
+          "properties": {
+            "bankName": { "type": "string" },
+            "accountNumber": { "type": "string" },
+            "accountName": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "affiliateId", "amount", "status", "bankDetails", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Property categories"
+    },
+    "/promos/{promoId}": {
+      "schema": { "$ref": "#/entities/Promo" },
+      "description": "Promotional offers"
+    },
+    "/properties/{propertyId}": {
+      "schema": { "$ref": "#/entities/Property" },
+      "description": "Accommodation properties"
+    },
+    "/attractions/{attractionId}": {
+      "schema": { "$ref": "#/entities/Attraction" },
+      "description": "Tourist attractions"
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "User bookings"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Payment records"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Property reviews"
+    },
+    "/blogs/{blogId}": {
+      "schema": { "$ref": "#/entities/Blog" },
+      "description": "Blog posts"
+    },
+    "/jeeps/{jeepId}": {
+      "schema": { "$ref": "#/entities/Jeep" },
+      "description": "Jeep rentals"
+    },
+    "/addons/{addOnId}": {
+      "schema": { "$ref": "#/entities/AddOn" },
+      "description": "Additional services"
+    },
+    "/tour-packages/{packageId}": {
+      "schema": { "$ref": "#/entities/TourPackage" },
+      "description": "Tour packages"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/Withdrawal" },
+      "description": "Stores affiliate withdrawal requests."
+    }
+  }
+}

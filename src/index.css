@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #booking-proof, #booking-proof * {
+      visibility: visible;
+    }
+    #booking-proof {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      box-shadow: none !important;
+      border: none !important;
+    }
+  }
+}
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-montserrat: "Montserrat", sans-serif;
+
+  --color-primary: #0066FF;
+  --color-primary-dark: #0047CC;
+  --color-primary-light: #E8F0FF;
+  --color-accent: #FF5A1F;
+  --color-accent-light: #FFF0EB;
+  --color-gold: #F5A623;
+  --color-success: #00B37E;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F7F8FC;
+  --color-surface-deep: #EEF1F8;
+  --color-text-primary: #0D1526;
+  --color-text-secondary: #4A5568;
+  --color-text-muted: #8899AA;
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E0;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-size: 14px; /* Scale down UI (DPI/Scaling) */
+  }
+  body {
+    @apply font-sans bg-surface-alt text-text-primary pb-[64px] md:pb-0 md:pt-[70px];
+  }
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+

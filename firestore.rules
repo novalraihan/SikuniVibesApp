@@ -1,0 +1,344 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {userId}
+    // Fields: uid, email, displayName, phoneNumber, role, createdAt
+    //
+    // Collection: categories
+    // Document ID: {categoryId}
+    // Fields: id, name, slug, iconUrl, imageUrl, isActive
+    //
+    // Collection: promos
+    // Document ID: {promoId}
+    // Fields: id, title, description, code, discountAmount, discountType, imageUrl, startDate, endDate, isActive, createdAt, updatedAt
+    //
+    // Collection: properties
+    // Document ID: {propertyId}
+    // Fields: id, categoryId, name, description, basePrice, dynamicPrices, images, amenities, maxGuests, isActive, bookedDates, ratingAverage, reviewCount, createdAt, updatedAt
+    //
+    // Collection: bookings
+    // Document ID: {bookingId}
+    // Fields: id, propertyId, userId, checkInDate, checkOutDate, totalAmount, status, paymentUrl, createdAt, updatedAt
+    //
+    // Collection: payments
+    // Document ID: {paymentId}
+    // Fields: id, bookingId, userId, grossAmount, paymentMethod, status, snapToken, createdAt, updatedAt
+    //
+    // Collection: reviews
+    // Document ID: {reviewId}
+    // Fields: id, propertyId, bookingId, userId, userName, userPhoto, rating, comment, createdAt
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'super_admin', 'resepsionis']) ||
+        (request.auth.token.email == "novalaron89@gmail.com")
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Domain Validators
+    function isValidSettings(data) {
+      return hasOnlyAllowedFields(['heroBannerUrl']) &&
+             (!('heroBannerUrl' in data) || (data.heroBannerUrl is string && data.heroBannerUrl.size() < 500));
+    }
+
+    function isValidUser(data) {
+      return data.uid is string &&
+             data.email is string &&
+             data.displayName is string &&
+             data.role in ['user', 'resepsionis', 'admin', 'super_admin'] &&
+             (!('createdAt' in data) || data.createdAt is number) &&
+             (!('affiliateStatus' in data) || data.affiliateStatus in ['none', 'pending', 'approved', 'rejected']) &&
+             (!('affiliateCode' in data) || (data.affiliateCode is string && data.affiliateCode.size() < 50)) &&
+             (!('affiliateBalance' in data) || data.affiliateBalance is number) &&
+             (!('affiliatePendingBalance' in data) || data.affiliatePendingBalance is number) &&
+             (!('affiliateBankDetails' in data) || data.affiliateBankDetails is map);
+    }
+
+    function isValidCategory(data) {
+      return hasOnlyAllowedFields(['id', 'name', 'slug', 'iconUrl', 'imageUrl', 'isActive']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.slug is string && data.slug.size() > 0 && data.slug.size() < 100 &&
+             (!('iconUrl' in data) || (data.iconUrl is string && data.iconUrl.size() < 500)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 500)) &&
+             data.isActive is bool;
+    }
+
+    function isValidAmenity(data) {
+      return hasOnlyAllowedFields(['id', 'name', 'icon', 'isActive']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('icon' in data) || (data.icon is string && data.icon.size() < 100)) &&
+             data.isActive is bool;
+    }
+
+    function isValidPromo(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'description', 'code', 'discountAmount', 'discountType', 'imageUrl', 'label', 'labelUrl', 'startDate', 'endDate', 'isActive', 'isHidden', 'applicableProperties', 'maxUsage', 'currentUsage', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 2000 &&
+             data.code is string && data.code.size() > 0 && data.code.size() < 50 &&
+             data.discountAmount is number && data.discountAmount > 0 &&
+             data.discountType in ['percentage', 'flat'] &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 500)) &&
+             (!('label' in data) || (data.label is string && data.label.size() < 100)) &&
+             (!('labelUrl' in data) || (data.labelUrl is string && data.labelUrl.size() < 500)) &&
+             data.startDate is number &&
+             data.endDate is number &&
+             data.isActive is bool &&
+             (!('isHidden' in data) || data.isHidden is bool) &&
+             (!('applicableProperties' in data) || (data.applicableProperties is list && data.applicableProperties.size() <= 1000)) &&
+             (!('maxUsage' in data) || data.maxUsage is number) &&
+             (!('currentUsage' in data) || data.currentUsage is number) &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidProperty(data) {
+      return hasOnlyAllowedFields(['id', 'categoryId', 'name', 'description', 'basePrice', 'dynamicPrices', 'images', 'amenities', 'maxGuests', 'isActive', 'bookedDates', 'ratingAverage', 'reviewCount', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.categoryId is string && data.categoryId.size() > 0 && data.categoryId.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.description is string && data.description.size() < 5000 &&
+             data.basePrice is number && data.basePrice >= 0 &&
+             (!('dynamicPrices' in data) || data.dynamicPrices is map) &&
+             data.images is list && data.images.size() <= 30 &&
+             data.amenities is list && data.amenities.size() <= 50 &&
+             data.maxGuests is number && data.maxGuests > 0 && data.maxGuests <= 100 &&
+             data.isActive is bool &&
+             data.bookedDates is list && data.bookedDates.size() <= 1000 &&
+             data.ratingAverage is number && data.ratingAverage >= 0 && data.ratingAverage <= 5 &&
+             data.reviewCount is number && data.reviewCount >= 0 &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidBooking(data) {
+      return hasOnlyAllowedFields(['id', 'propertyId', 'userId', 'guestName', 'guestEmail', 'guestPhone', 'checkInDate', 'checkOutDate', 'totalAmount', 'status', 'paymentUrl', 'createdAt', 'updatedAt', 'affiliateId', 'commissionAmount', 'commissionStatus']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.propertyId is string && data.propertyId.size() > 0 && data.propertyId.size() < 100 &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() > 0 && data.userId.size() < 100)) &&
+             (!('guestName' in data) || (data.guestName is string && data.guestName.size() > 0 && data.guestName.size() < 100)) &&
+             (!('guestEmail' in data) || (data.guestEmail is string && data.guestEmail.size() > 0 && data.guestEmail.size() < 100)) &&
+             (!('guestPhone' in data) || (data.guestPhone is string && data.guestPhone.size() > 0 && data.guestPhone.size() < 20)) &&
+             data.checkInDate is string && data.checkInDate.size() == 10 &&
+             data.checkOutDate is string && data.checkOutDate.size() == 10 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.status in ['PENDING', 'PAID', 'CANCELLED', 'COMPLETED'] &&
+             (!('paymentUrl' in data) || (data.paymentUrl is string && data.paymentUrl.size() < 500)) &&
+             data.createdAt is number &&
+             data.updatedAt is number &&
+             (!('affiliateId' in data) || (data.affiliateId is string && data.affiliateId.size() < 100)) &&
+             (!('commissionAmount' in data) || data.commissionAmount is number) &&
+             (!('commissionStatus' in data) || data.commissionStatus in ['pending', 'ready', 'paid', 'cancelled']);
+    }
+
+    function isValidWithdrawal(data) {
+      return hasOnlyAllowedFields(['id', 'affiliateId', 'amount', 'status', 'bankDetails', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.affiliateId is string && data.affiliateId.size() > 0 && data.affiliateId.size() < 100 &&
+             data.amount is number && data.amount >= 100000 &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.bankDetails is map &&
+             data.bankDetails.keys().hasAll(['bankName', 'accountNumber', 'accountName']) &&
+             data.bankDetails.bankName is string && data.bankDetails.bankName.size() > 0 && data.bankDetails.bankName.size() < 100 &&
+             data.bankDetails.accountNumber is string && data.bankDetails.accountNumber.size() > 0 && data.bankDetails.accountNumber.size() < 50 &&
+             data.bankDetails.accountName is string && data.bankDetails.accountName.size() > 0 && data.bankDetails.accountName.size() < 100 &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidPayment(data) {
+      return hasOnlyAllowedFields(['id', 'bookingId', 'userId', 'grossAmount', 'paymentMethod', 'status', 'snapToken', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.bookingId is string && data.bookingId.size() > 0 && data.bookingId.size() < 100 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.grossAmount is number && data.grossAmount >= 0 &&
+             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() < 100)) &&
+             data.status in ['pending', 'settlement', 'expire', 'cancel'] &&
+             (!('snapToken' in data) || (data.snapToken is string && data.snapToken.size() < 500)) &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidReview(data) {
+      return hasOnlyAllowedFields(['id', 'propertyId', 'bookingId', 'userId', 'userName', 'userPhoto', 'rating', 'comment', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.propertyId is string && data.propertyId.size() > 0 && data.propertyId.size() < 100 &&
+             data.bookingId is string && data.bookingId.size() > 0 && data.bookingId.size() < 100 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             (!('userPhoto' in data) || (data.userPhoto is string && data.userPhoto.size() < 500)) &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() < 2000 &&
+             data.createdAt is number;
+    }
+
+    function isValidBlog(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'slug', 'content', 'excerpt', 'imageUrl', 'author', 'isActive', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.slug is string && data.slug.size() > 0 && data.slug.size() < 200 &&
+             data.content is string && data.content.size() < 50000 &&
+             (!('excerpt' in data) || (data.excerpt is string && data.excerpt.size() < 1000)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 500)) &&
+             (!('author' in data) || (data.author is string && data.author.size() < 100)) &&
+             data.isActive is bool &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidJeep(data) {
+      return hasOnlyAllowedFields(['id', 'name', 'description', 'engine', 'capacity', 'pricePerDay', 'images', 'rules', 'regulations', 'isActive', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.description is string && data.description.size() < 5000 &&
+             data.engine is string && data.engine.size() < 100 &&
+             data.capacity is number && data.capacity > 0 &&
+             data.pricePerDay is number && data.pricePerDay >= 0 &&
+             data.images is list && data.images.size() <= 20 &&
+             data.rules is list && data.rules.size() <= 50 &&
+             data.regulations is list && data.regulations.size() <= 50 &&
+             data.isActive is bool &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    // Rules
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && (request.method == 'delete' || isValidSettings(request.resource.data));
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    request.resource.data.uid == userId &&
+                    ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    areImmutableFieldsUnchanged(['uid', 'createdAt']) &&
+                    (
+                      isAdmin() ||
+                      (
+                        isOwner(userId) && 
+                        request.resource.data.role == resource.data.role &&
+                        areImmutableFieldsUnchanged(['affiliateBalance', 'affiliatePendingBalance']) &&
+                        (
+                          areImmutableFieldsUnchanged(['affiliateStatus', 'affiliateCode']) ||
+                          (
+                            (!('affiliateStatus' in resource.data) || resource.data.affiliateStatus == 'none') && 
+                            request.resource.data.affiliateStatus == 'pending' &&
+                            request.resource.data.affiliateCode is string
+                          )
+                        )
+                      )
+                    );
+      allow delete: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true; // Publicly readable
+      allow create, update, delete: if isAdmin() && (request.method == 'delete' || isValidCategory(request.resource.data));
+    }
+
+    match /amenities/{amenityId} {
+      allow read: if true; // Publicly readable
+      allow create, update, delete: if isAdmin() && (request.method == 'delete' || isValidAmenity(request.resource.data));
+    }
+
+    match /promos/{promoId} {
+      allow read: if true; // Publicly readable
+      allow create, update, delete: if isAdmin() && (request.method == 'delete' || isValidPromo(request.resource.data));
+    }
+
+    match /properties/{propertyId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidProperty(request.resource.data);
+      // Allow users to update bookedDates when booking, but only bookedDates
+      allow update: if (isAdmin() && isValidProperty(request.resource.data)) || 
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookedDates', 'updatedAt']) &&
+                     isValidProperty(request.resource.data));
+      allow delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow get: if true;
+      allow list: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isValidBooking(request.resource.data) && 
+                    (!('userId' in request.resource.data) || (isAuthenticated() && request.resource.data.userId == request.auth.uid));
+      allow update: if isValidBooking(request.resource.data) && 
+                    areImmutableFieldsUnchanged(['id', 'propertyId', 'userId', 'guestName', 'guestEmail', 'guestPhone', 'createdAt']) &&
+                    ((isAuthenticated() && isDocOwner()) || isAdmin() || (!('userId' in resource.data) && request.resource.data.status == 'PAID'));
+      allow delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && isValidPayment(request.resource.data) && 
+                    request.resource.data.userId == request.auth.uid;
+      allow update: if (isAuthenticated() && isValidPayment(request.resource.data) && 
+                    areImmutableFieldsUnchanged(['id', 'bookingId', 'userId', 'createdAt']) &&
+                    (isDocOwner() || isAdmin()));
+      allow delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAuthenticated() && isValidReview(request.resource.data) && 
+                    request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidReview(request.resource.data) && 
+                    areImmutableFieldsUnchanged(['id', 'propertyId', 'bookingId', 'userId', 'createdAt']) &&
+                    (isDocOwner() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /blogs/{blogId} {
+      allow read: if true; // Publicly readable
+      allow create, update, delete: if isAdmin() && (request.method == 'delete' || isValidBlog(request.resource.data));
+    }
+
+    match /jeeps/{jeepId} {
+      allow read: if true; // Publicly readable
+      allow create, update, delete: if isAdmin() && (request.method == 'delete' || isValidJeep(request.resource.data));
+    }
+
+    match /withdrawals/{withdrawalId} {
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.affiliateId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidWithdrawal(request.resource.data) && request.resource.data.affiliateId == request.auth.uid && request.resource.data.status == 'pending' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.affiliateBalance >= request.resource.data.amount;
+      allow update: if isAdmin() && isValidWithdrawal(request.resource.data) && areImmutableFieldsUnchanged(['id', 'affiliateId', 'amount', 'bankDetails', 'createdAt']);
+      allow delete: if false;
+    }
+  }
+}
